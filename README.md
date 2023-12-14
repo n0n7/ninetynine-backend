@@ -14,7 +14,7 @@ go mod tidy
 
 ## run go server
 ```bash
-go run server.go
+.\script.bat
 ```
 
 ## run python client
