@@ -380,6 +380,11 @@ func joinroomHandler(w http.ResponseWriter, r *http.Request) {
 	// add player to room
 	roomData["players"] = append(roomData["players"].([]string), data["userId"].(string))
 
+	// if the room is full, change status to "full"
+	if playerCount+1 == roomData["maxCapacity"].(int) {
+		roomData["status"] = "full"
+	}
+
 	// update room in firestore
 	_, err = docRef.Set(context.Background(), roomData)
 	if err != nil {
