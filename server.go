@@ -54,6 +54,7 @@ func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/createroom", createroomHandler)
+	http.HandleFunc("/joinroom", joinroomHandler)
 
 	port := ":8080" // Port number to listen on
 
