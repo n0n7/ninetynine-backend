@@ -364,9 +364,9 @@ func joinroomHandler(w http.ResponseWriter, r *http.Request) {
 
 	// check if room is full
 	roomData := docSnap.Data()
-	playerCount := len(roomData["players"].([]string))
+	playerCount := len(roomData["players"].([]interface{}))
 
-	if playerCount >= roomData["maxCapacity"].(int) {
+	if int64(playerCount) >= roomData["maxCapacity"].(int64) {
 		handleRequestError(w, "Room is full", http.StatusBadRequest)
 		return
 	}
@@ -381,7 +381,7 @@ func joinroomHandler(w http.ResponseWriter, r *http.Request) {
 	roomData["players"] = append(roomData["players"].([]string), data["userId"].(string))
 
 	// if the room is full, change status to "full"
-	if playerCount+1 == roomData["maxCapacity"].(int) {
+	if int64(playerCount+1) == roomData["maxCapacity"].(int64) {
 		roomData["status"] = "full"
 	}
 
