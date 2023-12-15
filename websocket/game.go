@@ -16,7 +16,7 @@ type Game struct {
 	CardPerPlayer      int
 	LastPlayedCard     Card
 	Register           chan *Player
-	Unregister         chan *Player
+	Unregister         chan string
 	cardPlayed         chan Card
 	StartGame          chan bool
 	Stop               chan bool
@@ -51,7 +51,7 @@ func NewGame() *Game {
 			IsSpecial: true,
 		}, // empty card
 		Register:   make(chan *Player),
-		Unregister: make(chan *Player),
+		Unregister: make(chan string),
 		cardPlayed: make(chan Card),
 		StartGame:  make(chan bool),
 		Stop:       make(chan bool),
@@ -60,12 +60,13 @@ func NewGame() *Game {
 
 func (game *Game) Start() {
 	defer func() {
+		fmt.Println("game stopped")
+		game.Pool.GameAction <- "game ended"
 	}()
 
 	for {
 		select {
 		case stop := <-game.Stop:
-			game.Pool.GameAction <- "game ended"
 			if stop {
 				return
 			}
@@ -74,6 +75,45 @@ func (game *Game) Start() {
 			game.Players = append(game.Players, player)
 			fmt.Println("register player", player.PlayerId)
 			game.Pool.GameAction <- fmt.Sprintf("player %v joined", player.PlayerName)
+
+		case playerId := <-game.Unregister:
+			if game.Status == "playing" || game.Status == "ended" {
+				for _, p := range game.Players {
+					if p.PlayerId == playerId {
+						p.IsOut = true
+						p.Status = "left"
+						fmt.Println("unregister player from the game", p.PlayerId)
+						game.Pool.GameAction <- fmt.Sprintf("player %v left", p.PlayerName)
+						break
+					}
+				}
+
+				if playerId == game.Players[game.CurrentPlayerIndex].PlayerId {
+					game.NextPlayer()
+				} else {
+					if game.IsGameEnded() {
+						game.Status = "ended"
+						fmt.Println("game ended")
+						go func() {
+							game.Stop <- true
+						}()
+						return
+					}
+				}
+				break
+			}
+
+			if game.Status == "waiting" {
+				for i, p := range game.Players {
+					if p.PlayerId == p.PlayerId {
+						game.Players = append(game.Players[:i], game.Players[i+1:]...)
+						fmt.Println("unregister player from the game", p.PlayerId)
+						game.Pool.GameAction <- fmt.Sprintf("player %v left", p.PlayerName)
+						break
+					}
+				}
+			}
+			break
 
 		case _ = <-game.StartGame:
 			game.Status = "playing"
@@ -132,7 +172,7 @@ func (game *Game) PlayCard(card Card) {
 }
 
 func (game *Game) NextPlayer() {
-	game.CurrentPlayerIndex = game.CurrentDirection
+	game.CurrentPlayerIndex += game.CurrentDirection
 	if game.CurrentPlayerIndex < 0 {
 		game.CurrentPlayerIndex = len(game.Players) - 1
 	} else if game.CurrentPlayerIndex >= len(game.Players) {
@@ -140,27 +180,31 @@ func (game *Game) NextPlayer() {
 	}
 
 	for range game.Players {
-		if !game.Players[game.CurrentPlayerIndex].IsOut {
-			break
+		if game.IsGameEnded() {
+			fmt.Println("game ended")
+			game.Status = "ended"
+			go func() {
+				game.Stop <- true
+			}()
+			return
 		}
 
 		if game.CanCurrentPlayerPlay() {
 			break
 		}
 
-		game.Players[game.CurrentPlayerIndex].IsOut = true
-		game.Players[game.CurrentPlayerIndex].Status = "Out"
+		if !game.Players[game.CurrentPlayerIndex].IsOut {
+			fmt.Println("player", game.Players[game.CurrentPlayerIndex].PlayerName, "is out")
+			game.Players[game.CurrentPlayerIndex].IsOut = true
+			game.Players[game.CurrentPlayerIndex].Status = "Out"
+			game.Pool.GameAction <- fmt.Sprintf("player %v is out", game.Players[game.CurrentPlayerIndex].PlayerName)
+		}
+
 		game.CurrentPlayerIndex += game.CurrentDirection
 		if game.CurrentPlayerIndex < 0 {
 			game.CurrentPlayerIndex = len(game.Players) - 1
 		} else if game.CurrentPlayerIndex >= len(game.Players) {
 			game.CurrentPlayerIndex = 0
-		}
-
-		if game.IsGameEnded() {
-			game.Status = "ended"
-			game.Stop <- true
-			return
 		}
 
 	}
@@ -230,11 +274,12 @@ func getPlayerData(p Player) PlayerMessage {
 		PlayerId:        p.PlayerId,
 		PlayerName:      p.PlayerName,
 		PlayerAvatarURL: p.PlayerAvatarURL,
+		IsOut:           p.IsOut,
+		Status:          p.Status,
 	}
 }
 
 func (game *Game) isValidPlay(playerId string, card Card) bool {
-	fmt.Println("is valid play", playerId, card)
 	// check if it's player turn
 	if game.Players[game.CurrentPlayerIndex].PlayerId != playerId {
 		fmt.Println("not player turn")

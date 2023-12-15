@@ -24,17 +24,19 @@ type PlayerMessage struct {
 	PlayerId        string `json:"playerId"`
 	PlayerName      string `json:"playerName"`
 	PlayerAvatarURL string `json:"playerAvatarURL"`
+	IsOut           bool   `json:"isOut"`
+	Status          string `json:"status"`
 }
 
 type GameMessage struct {
-	Players            []PlayerMessage
-	PlayerCards        []Card
-	Status             string
-	CurrentPlayerIndex int
-	CurrentDirection   int
-	StackValue         int
-	MaxStackValue      int
-	LastPlayedCard     Card
+	Players            []PlayerMessage `json:"players"`
+	PlayerCards        []Card          `json:"playerCards"`
+	Status             string          `json:"status"`
+	CurrentPlayerIndex int             `json:"currentPlayerIndex"`
+	CurrentDirection   int             `json:"currentDirection"`
+	StackValue         int             `json:"stackValue"`
+	MaxStackValue      int             `json:"maxStackValue"`
+	LastPlayedCard     Card            `json:"lastPlayedCard"`
 }
 
 func (c *Client) Read() {
@@ -134,6 +136,5 @@ func (c *Client) Read() {
 			c.Conn.WriteJSON(Message{Error: "Invalid action"})
 		}
 
-		fmt.Printf("Message Received: %+v\n", string(msg))
 	}
 }

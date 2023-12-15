@@ -44,6 +44,7 @@ func (pool *Pool) Start() {
 			break
 		case client := <-pool.Unregister:
 			delete(pool.Clients, client)
+			pool.Game.Unregister <- client.ID
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))
 
 			if len(pool.Clients) == 0 {

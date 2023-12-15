@@ -5,9 +5,20 @@ import random
 
 def on_message(ws, message):
     msg = json.loads(message)
-    print("Recieve:", msg)
+    gameData = msg['gameData']
+    if msg['error'] != '':
+        print(msg['error'])
+        return
+    
+    print(msg['action'])
+    if gameData['status'] == 'playing':
+        print("current stack:", gameData['stackValue'])
+        print("current player:", gameData['currentPlayerIndex'])
+        for card in gameData['playerCards']:
+            print(card)
 
 def on_error(ws, error):
+    print('????')
     print(f"Error: {error}")
 
 def on_close(ws, _, __):
@@ -21,7 +32,7 @@ def on_open(ws):
     action = {
         "action": "join",
         "userId": str(userId),
-        "username": "test2",
+        "username": "test" + str(random.randint(0, 1000)),
         "profilePics": ""
     }
     ws.send(json.dumps(action))
