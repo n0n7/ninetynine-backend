@@ -1,6 +1,7 @@
 import websocket
 import threading
 import json
+import random
 
 def on_message(ws, message):
     msg = json.loads(message)
@@ -14,11 +15,13 @@ def on_close(ws, _, __):
 
 def on_open(ws):
     print("Connection opened")
+    #random user Id
+    userId = random.randint(0, 100000000)
     # Send a message after connection is opened
     action = {
         "action": "join",
-        "userId": "2X38aU6rFaWIYeQnroxDFuCm6d33",
-        "username": "test",
+        "userId": str(userId),
+        "username": "test2",
         "profilePics": ""
     }
     ws.send(json.dumps(action))
@@ -51,6 +54,19 @@ if __name__ == "__main__":
                 "action": "start"
             }
             print('start')
+            ws.send(json.dumps(action))
+
+        if msg == '2':
+            value = input('value: ')
+            isSpecial = input('isSpecial: ') == '1'
+            action = {
+                "action": "play",
+                "card": {
+                    "value": int(value),
+                    "isSpecial": isSpecial
+                }
+            }
+            print('play')
             ws.send(json.dumps(action))
 
 # import requests

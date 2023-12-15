@@ -65,6 +65,7 @@ func (game *Game) Start() {
 	for {
 		select {
 		case stop := <-game.Stop:
+			game.Pool.GameAction <- "game ended"
 			if stop {
 				return
 			}
@@ -77,13 +78,128 @@ func (game *Game) Start() {
 		case _ = <-game.StartGame:
 			game.Status = "playing"
 			for _, p := range game.Players {
+				p.Status = "playing"
 				for i := 0; i < game.CardPerPlayer; i++ {
 					p.Cards = append(p.Cards, randomCard())
 				}
 			}
+
 			game.Pool.GameAction <- "game started"
+			if !game.CanCurrentPlayerPlay() {
+				game.NextPlayer()
+			}
+		case card := <-game.cardPlayed:
+			fmt.Println("card played", card)
+			game.LastPlayedCard = card
+			player := game.Players[game.CurrentPlayerIndex]
+			game.PlayCard(card)
+			game.NextPlayer()
+
+			if !game.IsGameEnded() {
+				game.Pool.GameAction <- fmt.Sprintf("player %v played Card%v", player.PlayerName, card)
+			}
 		}
 
+	}
+}
+
+func (game *Game) PlayCard(card Card) {
+	if !card.IsSpecial {
+		game.StackValue += card.Value
+	} else {
+		switch card.Value {
+		case 0:
+			break
+		case 1:
+			game.CurrentDirection *= -1
+			break
+		case 2:
+			game.shufflePlayer()
+			break
+		case 3:
+			game.StackValue = game.MaxStackValue
+			break
+		}
+	}
+
+	// find card index and change it to new card
+	for i, c := range game.Players[game.CurrentPlayerIndex].Cards {
+		if c.Value == card.Value && c.IsSpecial == card.IsSpecial {
+			game.Players[game.CurrentPlayerIndex].Cards[i] = randomCard()
+			break
+		}
+	}
+}
+
+func (game *Game) NextPlayer() {
+	game.CurrentPlayerIndex = game.CurrentDirection
+	if game.CurrentPlayerIndex < 0 {
+		game.CurrentPlayerIndex = len(game.Players) - 1
+	} else if game.CurrentPlayerIndex >= len(game.Players) {
+		game.CurrentPlayerIndex = 0
+	}
+
+	for range game.Players {
+		if !game.Players[game.CurrentPlayerIndex].IsOut {
+			break
+		}
+
+		if game.CanCurrentPlayerPlay() {
+			break
+		}
+
+		game.Players[game.CurrentPlayerIndex].IsOut = true
+		game.Players[game.CurrentPlayerIndex].Status = "Out"
+		game.CurrentPlayerIndex += game.CurrentDirection
+		if game.CurrentPlayerIndex < 0 {
+			game.CurrentPlayerIndex = len(game.Players) - 1
+		} else if game.CurrentPlayerIndex >= len(game.Players) {
+			game.CurrentPlayerIndex = 0
+		}
+
+		if game.IsGameEnded() {
+			game.Status = "ended"
+			game.Stop <- true
+			return
+		}
+
+	}
+}
+
+func (game *Game) IsGameEnded() bool {
+	return game.currentPlayerCount() == 1
+}
+
+func (game *Game) currentPlayerCount() int {
+	count := 0
+	for _, p := range game.Players {
+		if !p.IsOut {
+			count++
+		}
+	}
+	return count
+}
+
+func (game *Game) CanCurrentPlayerPlay() bool {
+	for _, card := range game.Players[game.CurrentPlayerIndex].Cards {
+		if game.isValidPlay(game.Players[game.CurrentPlayerIndex].PlayerId, card) {
+			return true
+		}
+	}
+	return false
+}
+
+func (game *Game) shufflePlayer() {
+	currentPlayerId := game.Players[game.CurrentPlayerIndex].PlayerId
+	players := game.Players
+	rand.NewSource(time.Now().UnixNano())
+	rand.Shuffle(len(players), func(i, j int) { players[i], players[j] = players[j], players[i] })
+
+	for i, p := range players {
+		if p.PlayerId == currentPlayerId {
+			game.CurrentPlayerIndex = i
+			break
+		}
 	}
 }
 
@@ -106,8 +222,6 @@ func (game *Game) GetGameData(userId string) GameMessage {
 		}
 	}
 
-	fmt.Println("game data", gameData)
-
 	return gameData
 }
 
@@ -120,8 +234,10 @@ func getPlayerData(p Player) PlayerMessage {
 }
 
 func (game *Game) isValidPlay(playerId string, card Card) bool {
+	fmt.Println("is valid play", playerId, card)
 	// check if it's player turn
 	if game.Players[game.CurrentPlayerIndex].PlayerId != playerId {
+		fmt.Println("not player turn")
 		return false
 	}
 	// check if player has that card
@@ -134,6 +250,7 @@ func (game *Game) isValidPlay(playerId string, card Card) bool {
 	}
 
 	if !hasCard {
+		fmt.Println("player doesn't have that card")
 		return false
 	}
 
@@ -147,6 +264,7 @@ func (game *Game) isValidPlay(playerId string, card Card) bool {
 		return true
 	}
 
+	fmt.Println("card value is invalid")
 	return false
 }
 

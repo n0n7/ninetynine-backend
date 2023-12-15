@@ -17,7 +17,7 @@ type Client struct {
 type Message struct {
 	Error    string      `json:"error"`
 	Action   string      `json:"action"`
-	GameData GameMessage `json:"gameMessage"`
+	GameData GameMessage `json:"gameData"`
 }
 
 type PlayerMessage struct {
@@ -100,6 +100,11 @@ func (c *Client) Read() {
 				continue
 			}
 
+			if len(c.Pool.Game.Players) < 2 {
+				c.Conn.WriteJSON(Message{Error: "Not enough players"})
+				continue
+			}
+
 			c.Pool.Game.StartGame <- true
 
 			break
@@ -110,8 +115,10 @@ func (c *Client) Read() {
 				continue
 			}
 
+			jsonData, _ := json.Marshal(cardData)
+
 			var card Card
-			json.Unmarshal([]byte(cardData.(string)), &card)
+			json.Unmarshal(jsonData, &card)
 
 			if !c.Pool.Game.isValidPlay(c.ID, card) {
 				c.Conn.WriteJSON(Message{Error: "Invalid play"})
