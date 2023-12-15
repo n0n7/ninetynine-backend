@@ -1,0 +1,132 @@
+package websocket
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+
+	"github.com/gorilla/websocket"
+)
+
+type Client struct {
+	ID   string
+	Conn *websocket.Conn
+	Pool *Pool
+}
+
+type Message struct {
+	Error    string      `json:"error"`
+	Action   string      `json:"action"`
+	GameData GameMessage `json:"gameMessage"`
+}
+
+type PlayerMessage struct {
+	PlayerId        string `json:"playerId"`
+	PlayerName      string `json:"playerName"`
+	PlayerAvatarURL string `json:"playerAvatarURL"`
+}
+
+type GameMessage struct {
+	Players            []PlayerMessage
+	PlayerCards        []Card
+	Status             string
+	CurrentPlayerIndex int
+	CurrentDirection   int
+	StackValue         int
+	MaxStackValue      int
+	LastPlayedCard     Card
+}
+
+func (c *Client) Read() {
+	defer func() {
+		c.Pool.Unregister <- c
+		c.Conn.Close()
+	}()
+
+	for {
+		_, msg, err := c.Conn.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		// decode json message
+		var data map[string]interface{}
+		err = json.Unmarshal(msg, &data)
+		if err != nil {
+			c.Conn.WriteJSON(Message{Error: "Invalid request body"})
+			continue
+		}
+
+		action, exists := data["action"]
+		if !exists {
+			c.Conn.WriteJSON(Message{Error: "Invalid request body"})
+			continue
+		}
+
+		switch action {
+		case "join":
+			isValid := true
+			requiredFields := []string{"userId", "username", "profilePics"}
+			for _, field := range requiredFields {
+				if _, exists := data[field]; !exists {
+					isValid = false
+					break
+				}
+			}
+
+			if !isValid {
+				c.Conn.WriteJSON(Message{Error: "Invalid request body"})
+				continue
+			}
+
+			c.ID = data["userId"].(string)
+
+			// add player to the game
+			newPlayer := &Player{
+				Status:          "waiting",
+				Cards:           []Card{},
+				IsOut:           false,
+				PlayerId:        c.ID,
+				PlayerName:      data["username"].(string),
+				PlayerAvatarURL: data["profilePics"].(string),
+			}
+			c.Pool.Game.Register <- newPlayer
+			break
+		case "start":
+			fmt.Println("start")
+			if c.Pool.Game.Status != "waiting" {
+				c.Conn.WriteJSON(Message{Error: "Game has already started"})
+				continue
+			}
+
+			c.Pool.Game.StartGame <- true
+
+			break
+		case "play":
+			cardData, exists := data["card"]
+			if !exists {
+				c.Conn.WriteJSON(Message{Error: "Invalid request body"})
+				continue
+			}
+
+			var card Card
+			json.Unmarshal([]byte(cardData.(string)), &card)
+
+			if !c.Pool.Game.isValidPlay(c.ID, card) {
+				c.Conn.WriteJSON(Message{Error: "Invalid play"})
+				continue
+			}
+
+			c.Pool.Game.cardPlayed <- card
+			break
+		case "leave":
+			fmt.Println("leave")
+			break
+		default:
+			c.Conn.WriteJSON(Message{Error: "Invalid action"})
+		}
+
+		fmt.Printf("Message Received: %+v\n", string(msg))
+	}
+}

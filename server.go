@@ -5,8 +5,11 @@ import (
 	"log"
 	"net/http"
 
+	websocket "ninetynine/websocket"
+
 	"cloud.google.com/go/firestore"
 	"firebase.google.com/go/auth"
+	"github.com/gorilla/mux"
 )
 
 var FirestoreClient *firestore.Client
@@ -27,18 +30,23 @@ func main() {
 	// firebase setup
 	InitializeFirebase()
 
+	router := mux.NewRouter()
+
 	// request handlers
-	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/createroom", createroomHandler)
-	http.HandleFunc("/joinroom", joinroomHandler)
+	router.HandleFunc("/register", registerHandler)
+	router.HandleFunc("/login", loginHandler)
+	router.HandleFunc("/createroom", createroomHandler)
+	router.HandleFunc("/joinroom", joinroomHandler)
+
+	// websocket handlers
+	router.HandleFunc("/ws/{roomId}", websocketHandler)
 
 	port := ":8080" // Port number to listen on
 
 	// Create a new HTTP server with default handler
 	server := &http.Server{
 		Addr:    port,
-		Handler: nil, // Using default handler (nil)
+		Handler: router, // Using default handler (nil)
 	}
 
 	// Start the HTTP server
@@ -47,4 +55,41 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+var Pools = make(map[string]*websocket.Pool)
+
+func websocketHandler(w http.ResponseWriter, r *http.Request) {
+	roomId := mux.Vars(r)["roomId"]
+
+	if _, exist := Pools[roomId]; !exist {
+		fmt.Println("Creating new pool for room", roomId)
+		Pools[roomId] = websocket.NewPool(roomId)
+		go Pools[roomId].Start()
+	}
+
+	fmt.Println("WebSocket Endpoint Hit for room", roomId)
+	serveWs(Pools[roomId], w, r)
+
+}
+
+func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if len(pool.Clients) == 0 {
+			delete(Pools, pool.RoomId)
+			fmt.Println("Deleting room", pool.RoomId)
+		}
+	}()
+	conn, err := websocket.Upgrade(w, r)
+	if err != nil {
+		fmt.Fprintf(w, "%+v\n", err)
+	}
+
+	client := &websocket.Client{
+		Conn: conn,
+		Pool: pool,
+	}
+
+	pool.Register <- client
+	client.Read()
 }
