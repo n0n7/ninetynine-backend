@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"cloud.google.com/go/firestore"
 	"firebase.google.com/go/auth"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+	"google.golang.org/api/iterator"
 )
 
 var FirestoreClient *firestore.Client
@@ -43,10 +46,14 @@ func main() {
 
 	port := ":8080" // Port number to listen on
 
+	// setup CORS
+	corsHandler := cors.Default()
+	handler := corsHandler.Handler(router)
+
 	// Create a new HTTP server with default handler
 	server := &http.Server{
 		Addr:    port,
-		Handler: router, // Using default handler (nil)
+		Handler: handler, // Using default handler (nil)
 	}
 
 	// Start the HTTP server
@@ -61,6 +68,21 @@ var Pools = make(map[string]*websocket.Pool)
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	roomId := mux.Vars(r)["roomId"]
+
+	// check if room exist in firestore
+	docRef := FirestoreClient.Collection("rooms").Doc(roomId)
+	_, err := docRef.Get(context.Background())
+	if err == iterator.Done {
+		fmt.Println("Room", roomId, "does not exist")
+		handleRequestError(w, "room does not exist", http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		fmt.Println("Error getting document", err)
+		handleRequestError(w, "error getting document", http.StatusInternalServerError)
+		return
+	}
 
 	if _, exist := Pools[roomId]; !exist {
 		fmt.Println("Creating new pool for room", roomId)
@@ -92,4 +114,8 @@ func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 
 	pool.Register <- client
 	client.Read()
+}
+
+func ManageRoom(roomId string) {
+
 }
