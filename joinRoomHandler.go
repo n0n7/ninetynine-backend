@@ -63,7 +63,7 @@ func joinroomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check room status
-	if roomData["status"].(string) != "open" {
+	if roomData["status"].(string) != "waiting" {
 		handleRequestError(w, "Room is not open", http.StatusBadRequest)
 		return
 	}

@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var GameStateChange = make(map[string]chan Game)
+
 type Game struct {
 	Players            []*Player
 	Status             string
@@ -62,6 +64,7 @@ func (game *Game) Start() {
 	defer func() {
 		fmt.Println("game stopped")
 		game.Pool.GameAction <- "game ended"
+		GameStateChange[game.Pool.RoomId] <- *game
 	}()
 
 	for {
@@ -75,6 +78,7 @@ func (game *Game) Start() {
 			game.Players = append(game.Players, player)
 			fmt.Println("register player", player.PlayerId)
 			game.Pool.GameAction <- fmt.Sprintf("player %v joined", player.PlayerName)
+			GameStateChange[game.Pool.RoomId] <- *game
 
 		case playerId := <-game.Unregister:
 			if game.Status == "playing" || game.Status == "ended" {
@@ -109,6 +113,7 @@ func (game *Game) Start() {
 						game.Players = append(game.Players[:i], game.Players[i+1:]...)
 						fmt.Println("unregister player from the game", p.PlayerId)
 						game.Pool.GameAction <- fmt.Sprintf("player %v left", p.PlayerName)
+						GameStateChange[game.Pool.RoomId] <- *game
 						break
 					}
 				}
@@ -118,6 +123,7 @@ func (game *Game) Start() {
 		case _ = <-game.StartGame:
 			game.Status = "playing"
 			for _, p := range game.Players {
+				p.Cards = []Card{}
 				p.Status = "playing"
 				for i := 0; i < game.CardPerPlayer; i++ {
 					p.Cards = append(p.Cards, randomCard())
@@ -125,6 +131,7 @@ func (game *Game) Start() {
 			}
 
 			game.Pool.GameAction <- "game started"
+			GameStateChange[game.Pool.RoomId] <- *game
 			if !game.CanCurrentPlayerPlay() {
 				game.NextPlayer()
 			}

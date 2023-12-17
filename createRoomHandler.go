@@ -57,7 +57,7 @@ func createroomHandler(w http.ResponseWriter, r *http.Request) {
 		OwnerID:      data["userId"].(string),
 		MaxCapacity:  8,
 		MaxSpectator: 16,
-		Status:       "open",
+		Status:       "waiting",
 		Players:      []string{},
 		Spectators:   []string{},
 	}

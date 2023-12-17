@@ -112,10 +112,54 @@ func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 		Pool: pool,
 	}
 
+	go ManageRoom(pool.RoomId)
+
 	pool.Register <- client
 	client.Read()
 }
 
 func ManageRoom(roomId string) {
+	defer func() {
+		delete(websocket.GameStateChange, roomId)
+	}()
+
+	for {
+		select {
+		case game := <-websocket.GameStateChange[roomId]:
+			// get roomData from firestore
+			docRef := FirestoreClient.Collection("rooms").Doc(roomId)
+			docSnap, err := docRef.Get(context.Background())
+			if err != nil {
+				fmt.Println("Error getting document", err)
+				break
+			}
+
+			fmt.Println("game status update", game.Status, "players", game.Players)
+
+			roomData := docSnap.Data()
+
+			// edit status
+			roomData["status"] = game.Status
+
+			// edit player
+			playerIds := []string{}
+			for _, player := range game.Players {
+				playerIds = append(playerIds, player.PlayerId)
+			}
+			roomData["players"] = playerIds
+
+			// update room in firestore
+			_, err = docRef.Set(context.Background(), roomData)
+			if err != nil {
+				fmt.Println("Error updating document", err)
+				break
+			}
+
+			if game.Status == "ended" {
+				return
+			}
+
+		}
+	}
 
 }

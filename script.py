@@ -41,7 +41,7 @@ global ws
 
 def start_websocket_client():
     global ws
-    ws = websocket.WebSocketApp("ws://localhost:8080/ws/hello",
+    ws = websocket.WebSocketApp("ws://localhost:8080/ws/000000000000",
                                 on_message=on_message,
                                 on_error=on_error,
                                 on_close=on_close)
