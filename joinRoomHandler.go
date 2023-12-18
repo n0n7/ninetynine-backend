@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
-	Firebase "ninetynine/firebase"
-
-	"google.golang.org/api/iterator"
+	Auth "ninetynine/auth"
+	Room "ninetynine/room"
 )
 
 func joinroomHandler(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +18,7 @@ func joinroomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check user is logged in
+	// check valid format
 	var data map[string]interface{}
 	err := json.NewDecoder(r.Body).Decode(&data)
 
@@ -29,59 +27,39 @@ func joinroomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, exists := data["userId"]; !exists {
-		handleRequestError(w, "Invalid request", http.StatusBadRequest)
+	requiredFields := []string{"userId", "roomId"}
+	for _, field := range requiredFields {
+		if _, exists := data[field]; !exists {
+			handleRequestError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// check userId
+	userId := data["userId"].(string)
+	isValid, err := Auth.IsValidUserId(userId)
+
+	if err != nil {
+		handleRequestError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// check roomId exists
-	if _, exists := data["roomId"]; !exists {
-		handleRequestError(w, "Invalid request", http.StatusBadRequest)
+	if !isValid {
+		handleRequestError(w, "Invalid user", http.StatusBadRequest)
 		return
 	}
 
 	roomId := data["roomId"].(string)
 
-	// find room in firestore
-	docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
-	docSnap, err := docRef.Get(context.Background())
-	if err == iterator.Done {
-		handleRequestError(w, "Room does not exist", http.StatusBadRequest)
-		return
-	}
-
+	// join room
+	roomData, err, errMsg := Room.JoinRoom(userId, roomId)
 	if err != nil {
-		handleRequestError(w, "Error finding room", http.StatusInternalServerError)
+		handleRequestError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// check if room is full
-	roomData := docSnap.Data()
-	playerCount := len(roomData["players"].([]interface{}))
-
-	if int64(playerCount) >= roomData["maxCapacity"].(int64) {
-		handleRequestError(w, "Room is full", http.StatusBadRequest)
-		return
-	}
-
-	// check room status
-	if roomData["status"].(string) != "waiting" {
-		handleRequestError(w, "Room is not open", http.StatusBadRequest)
-		return
-	}
-
-	// add player to room
-	roomData["players"] = append(roomData["players"].([]string), data["userId"].(string))
-
-	// if the room is full, change status to "full"
-	if int64(playerCount+1) == roomData["maxCapacity"].(int64) {
-		roomData["status"] = "full"
-	}
-
-	// update room in firestore
-	_, err = docRef.Set(context.Background(), roomData)
-	if err != nil {
-		handleRequestError(w, "Error joining room", http.StatusInternalServerError)
+	if errMsg != "" {
+		handleRequestError(w, errMsg, http.StatusBadRequest)
 		return
 	}
 
