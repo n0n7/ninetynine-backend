@@ -47,8 +47,6 @@ func CreateUser(userData map[string]interface{}) (map[string]interface{}, error)
 	}
 
 	userData["userId"] = docRef.ID
-	userData["userId"] = docRef.ID
-	Firebase.FirestoreClient.Collection("users").Doc(docRef.ID).Set(context.Background(), userData)
 
 	delete(userData, "password")
 	return userData, nil
@@ -68,6 +66,8 @@ func Login(email string, password string) (bool, map[string]interface{}, error) 
 	if userData["password"] != hashedPassword(password) {
 		return false, nil, nil
 	}
+
+	userData["userId"] = docSnap.Ref.ID
 
 	delete(userData, "password")
 	return true, userData, nil
