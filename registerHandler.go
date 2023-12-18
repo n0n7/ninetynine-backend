@@ -6,7 +6,6 @@ import (
 	"time"
 
 	Auth "ninetynine/auth"
-	Utils "ninetynine/utils"
 )
 
 type RegisterData struct {
@@ -47,7 +46,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	newUser.Email = data["email"].(string)
 
 	// check if email is valid
-	if !Utils.IsValidEmail(newUser.Email) {
+	if !Auth.IsValidEmail(newUser.Email) {
 		handleRequestError(w, "Invalid email format", http.StatusBadRequest)
 		return
 	}
