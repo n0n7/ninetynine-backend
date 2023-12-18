@@ -1,11 +1,11 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"google.golang.org/api/iterator"
+	Auth "ninetynine/auth"
 )
 
 type LoginData struct {
@@ -43,24 +43,16 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	loginData.Email = data["email"].(string)
 	loginData.Password = data["password"].(string)
 
-	hashedPassword := hashedPassword(loginData.Password)
-
 	// authenticate user in firestore
-	query := FirestoreClient.Collection("users").Where("email", "==", loginData.Email).Limit(1)
-	docSnap, err := query.Documents(context.Background()).Next()
-	if err == iterator.Done {
-		handleRequestError(w, "User with this email does not exist", http.StatusBadRequest)
-		return
-	}
-
+	isValid, userData, err := Auth.Login(loginData.Email, loginData.Password)
 	if err != nil {
-		handleRequestError(w, "Error checking email", http.StatusInternalServerError)
+		fmt.Println(err)
+		handleRequestError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	userData := docSnap.Data()
-	if userData["password"] != hashedPassword {
-		handleRequestError(w, "Incorrect password", http.StatusBadRequest)
+	if !isValid {
+		handleRequestError(w, "email or password is incorrect", http.StatusBadRequest)
 		return
 	}
 

@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
-	"firebase.google.com/go/auth"
-	"google.golang.org/api/iterator"
+	Auth "ninetynine/auth"
+	Utils "ninetynine/utils"
 )
 
 type RegisterData struct {
@@ -49,65 +47,49 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	newUser.Email = data["email"].(string)
 
 	// check if email is valid
-	if !IsValidEmail(newUser.Email) {
+	if !Utils.IsValidEmail(newUser.Email) {
 		handleRequestError(w, "Invalid email format", http.StatusBadRequest)
 		return
 	}
 
 	// check if email already exists
-	_, err = AuthClient.GetUserByEmail(context.Background(), newUser.Email)
-	if err == nil {
+	isUniqueEmail, err := Auth.CheckUniqueEmail(newUser.Email)
+	if err != nil {
+		handleRequestError(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	if !isUniqueEmail {
 		handleRequestError(w, "User with this email already exists", http.StatusBadRequest)
 		return
 	}
 
 	// check if username already exists in firestore
-	query := FirestoreClient.Collection("users").Where("username", "==", newUser.Username).Limit(1)
-	docSnap, err := query.Documents(context.Background()).Next()
-	if err != nil && err != iterator.Done {
-		handleRequestError(w, "Error checking username", http.StatusInternalServerError)
+	isUniqueUsername, err := Auth.CheckUniqueUsername(newUser.Username)
+	if err != nil {
+		handleRequestError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	if docSnap != nil {
+	if !isUniqueUsername {
 		handleRequestError(w, "User with this username already exists", http.StatusBadRequest)
 		return
 	}
 
-	// create user in auth
-	params := (&auth.UserToCreate{}).
-		Email(newUser.Email).
-		Password(newUser.Password)
-
-	userRecord, err := AuthClient.CreateUser(context.Background(), params)
-	if err != nil {
-		handleRequestError(w, "Error creating user", http.StatusInternalServerError)
-		fmt.Println(err)
-		return
-	}
-
 	// create user in firestore
-	docRef := FirestoreClient.Collection("users").Doc(userRecord.UID)
-
-	hashedPassword := hashedPassword(newUser.Password)
-
 	userData := map[string]interface{}{
 		"username":  newUser.Username,
 		"email":     newUser.Email,
-		"userId":    userRecord.UID,
 		"createdAt": time.Now().Unix(), // Current timestamp (UNIX time)
-		"password":  hashedPassword,
+		"password":  newUser.Password,  // get hashed in Auth.CreateUser function
 		"gamestat": map[string]interface{}{
 			"playCount": 0,
 		},
 	}
 
-	_, err = docRef.Set(context.Background(), userData)
+	userData, err = Auth.CreateUser(userData)
 	if err != nil {
-		handleRequestError(w, "Error registering user", http.StatusInternalServerError)
+		handleRequestError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-
-	delete(userData, "password")
 
 	// write response
 	w.WriteHeader(http.StatusOK)

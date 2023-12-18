@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	Firebase "ninetynine/firebase"
+
 	"google.golang.org/api/iterator"
 )
 
@@ -35,7 +37,7 @@ func createroomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// find user in firestore
-	docRef := FirestoreClient.Collection("users").Doc(data["userId"].(string))
+	docRef := Firebase.FirestoreClient.Collection("users").Doc(data["userId"].(string))
 	_, err = docRef.Get(context.Background())
 	if err == iterator.Done {
 		handleRequestError(w, "User does not exist", http.StatusBadRequest)
@@ -63,7 +65,7 @@ func createroomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add room to firestore
-	_, err = FirestoreClient.Collection("rooms").Doc(roomID).Set(context.Background(), newRoom)
+	_, err = Firebase.FirestoreClient.Collection("rooms").Doc(roomID).Set(context.Background(), newRoom)
 	if err != nil {
 		handleRequestError(w, "Error creating room", http.StatusInternalServerError)
 		return

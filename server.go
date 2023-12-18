@@ -6,17 +6,14 @@ import (
 	"log"
 	"net/http"
 
+	"ninetynine/firebase"
+	Firebase "ninetynine/firebase"
 	websocket "ninetynine/websocket"
 
-	"cloud.google.com/go/firestore"
-	"firebase.google.com/go/auth"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"google.golang.org/api/iterator"
 )
-
-var FirestoreClient *firestore.Client
-var AuthClient *auth.Client
 
 type Room struct {
 	RoomID       string   `json:"roomId"`
@@ -31,7 +28,7 @@ type Room struct {
 
 func main() {
 	// firebase setup
-	InitializeFirebase()
+	firebase.InitializeFirebase()
 
 	router := mux.NewRouter()
 
@@ -70,7 +67,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	roomId := mux.Vars(r)["roomId"]
 
 	// check if room exist in firestore
-	docRef := FirestoreClient.Collection("rooms").Doc(roomId)
+	docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
 	_, err := docRef.Get(context.Background())
 	if err == iterator.Done {
 		fmt.Println("Room", roomId, "does not exist")
@@ -127,7 +124,7 @@ func ManageRoom(roomId string) {
 		select {
 		case game := <-websocket.GameStateChange[roomId]:
 			// get roomData from firestore
-			docRef := FirestoreClient.Collection("rooms").Doc(roomId)
+			docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
 			docSnap, err := docRef.Get(context.Background())
 			if err != nil {
 				fmt.Println("Error getting document", err)

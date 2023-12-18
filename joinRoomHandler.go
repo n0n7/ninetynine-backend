@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	Firebase "ninetynine/firebase"
+
 	"google.golang.org/api/iterator"
 )
 
@@ -41,7 +43,7 @@ func joinroomHandler(w http.ResponseWriter, r *http.Request) {
 	roomId := data["roomId"].(string)
 
 	// find room in firestore
-	docRef := FirestoreClient.Collection("rooms").Doc(roomId)
+	docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
 	docSnap, err := docRef.Get(context.Background())
 	if err == iterator.Done {
 		handleRequestError(w, "Room does not exist", http.StatusBadRequest)
