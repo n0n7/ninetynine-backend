@@ -15,17 +15,6 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-type Room struct {
-	RoomID       string   `json:"roomId"`
-	CreatedAt    int64    `json:"createTime"`
-	OwnerID      string   `json:"ownerId"`
-	MaxCapacity  int      `json:"maxCapacity"`
-	MaxSpectator int      `json:"maxSpectator"`
-	Status       string   `json:"status"`
-	Players      []string `json:"players"`
-	Spectators   []string `json:"spectators"`
-}
-
 func main() {
 	// firebase setup
 	firebase.InitializeFirebase()

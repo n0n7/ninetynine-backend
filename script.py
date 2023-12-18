@@ -11,6 +11,8 @@ def on_message(ws, message):
         return
     
     print(msg['action'])
+    if gameData['status'] == 'waiting':
+        print(gameData)
     if gameData['status'] == 'playing':
         print("current stack:", gameData['stackValue'])
         print("current player:", gameData['currentPlayerIndex'])

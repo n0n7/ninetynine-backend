@@ -73,6 +73,18 @@ func Login(email string, password string) (bool, map[string]interface{}, error) 
 	return true, userData, nil
 }
 
+func IsValidUserId(userId string) (bool, error) {
+	docRef := Firebase.FirestoreClient.Collection("users").Doc(userId)
+	_, err := docRef.Get(context.Background())
+	if err == iterator.Done {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func hashedPassword(password string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(password))
