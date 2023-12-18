@@ -111,7 +111,7 @@ func ManageRoom(roomId string) {
 
 	for {
 		select {
-		case game := <-websocket.GameStateChange[roomId]:
+		case gameStatus := <-websocket.GameStateChange[roomId]:
 			// get roomData from firestore
 			docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
 			docSnap, err := docRef.Get(context.Background())
@@ -120,19 +120,12 @@ func ManageRoom(roomId string) {
 				break
 			}
 
-			fmt.Println("game status update", game.Status, "players", game.Players)
+			fmt.Println("game status update", gameStatus)
 
 			roomData := docSnap.Data()
 
 			// edit status
-			roomData["status"] = game.Status
-
-			// edit player
-			playerIds := []string{}
-			for _, player := range game.Players {
-				playerIds = append(playerIds, player.PlayerId)
-			}
-			roomData["players"] = playerIds
+			roomData["status"] = gameStatus
 
 			// update room in firestore
 			_, err = docRef.Set(context.Background(), roomData)
@@ -141,7 +134,7 @@ func ManageRoom(roomId string) {
 				break
 			}
 
-			if game.Status == "ended" {
+			if gameStatus == "ended" {
 				return
 			}
 
