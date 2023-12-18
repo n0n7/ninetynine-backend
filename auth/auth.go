@@ -9,6 +9,8 @@ import (
 	Firebase "ninetynine/firebase"
 
 	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func CheckUniqueEmail(email string) (bool, error) {
@@ -76,7 +78,7 @@ func Login(email string, password string) (bool, map[string]interface{}, error) 
 func IsValidUserId(userId string) (bool, error) {
 	docRef := Firebase.FirestoreClient.Collection("users").Doc(userId)
 	_, err := docRef.Get(context.Background())
-	if err == iterator.Done {
+	if status.Code(err) == codes.NotFound {
 		return false, nil
 	}
 	if err != nil {

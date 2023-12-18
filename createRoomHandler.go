@@ -48,8 +48,12 @@ func createroomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate a random 12-digit room ID
+	// create new room
 	newRoom, err := Room.CreateRoom(userId)
+	if err != nil {
+		handleRequestError(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
 	// write response
 	w.WriteHeader(http.StatusOK)

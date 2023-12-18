@@ -2,17 +2,20 @@ package room
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	Firebase "ninetynine/firebase"
+	"reflect"
 	"strconv"
 	"time"
 
-	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Room struct {
 	RoomID       string   `json:"roomId"`
-	CreatedAt    int64    `json:"createTime"`
+	CreatedAt    int64    `json:"createdAt"`
 	OwnerID      string   `json:"ownerId"`
 	MaxCapacity  int      `json:"maxCapacity"`
 	MaxSpectator int      `json:"maxSpectator"`
@@ -21,9 +24,31 @@ type Room struct {
 	Spectators   []string `json:"spectators"`
 }
 
+func RoomToMap(room Room) (map[string]interface{}, error) {
+	roomMap := make(map[string]interface{})
+
+	reflectValue := reflect.ValueOf(room)
+	reflectType := reflect.TypeOf(room)
+
+	for i := 0; i < reflectValue.NumField(); i++ {
+		field := reflectValue.Field(i)
+		fieldName := reflectType.Field(i).Tag.Get("json")
+
+		// Ignore fields with empty tag or unsupported types
+		if fieldName == "" || field.Kind() == reflect.Invalid {
+			continue
+		}
+
+		roomMap[fieldName] = field.Interface()
+	}
+
+	return roomMap, nil
+}
+
 func CreateRoom(userId string) (Room, error) {
 	roomId, err := generateRoomId()
 	if err != nil {
+		fmt.Println(err)
 		return Room{}, err
 	}
 
@@ -35,12 +60,16 @@ func CreateRoom(userId string) (Room, error) {
 		MaxCapacity:  8,
 		MaxSpectator: 16,
 		Status:       "waiting",
-		Players:      []string{},
+		Players:      []string{userId},
 		Spectators:   []string{},
 	}
 
-	_, err = Firebase.FirestoreClient.Collection("rooms").Doc(roomId).Set(context.Background(), newRoom)
+	jsonData, _ := RoomToMap(newRoom)
+	fmt.Println(jsonData)
+
+	_, err = Firebase.FirestoreClient.Collection("rooms").Doc(roomId).Set(context.Background(), jsonData)
 	if err != nil {
+		fmt.Println(err)
 		return Room{}, err
 	}
 
@@ -100,7 +129,7 @@ func findRoom(roomId string) (Room, error) {
 	// find room in firestore
 	docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
 	docSnap, err := docRef.Get(context.Background())
-	if err == iterator.Done {
+	if status.Code(err) == codes.NotFound {
 		return Room{}, nil
 	}
 
@@ -110,25 +139,40 @@ func findRoom(roomId string) (Room, error) {
 
 	data := docSnap.Data()
 
+	fmt.Println(data)
+
 	roomData := Room{
 		RoomID:       roomId,
 		CreatedAt:    data["createdAt"].(int64),
 		OwnerID:      data["ownerId"].(string),
-		MaxCapacity:  data["maxCapacity"].(int),
-		MaxSpectator: data["maxSpectator"].(int),
+		MaxCapacity:  int(data["maxCapacity"].(int64)),
+		MaxSpectator: int(data["maxSpectator"].(int64)),
 		Status:       data["status"].(string),
-		Players:      data["players"].([]string),
-		Spectators:   data["spectators"].([]string),
+		Players:      toStringSlice(data["players"].([]interface{})),
+		Spectators:   toStringSlice(data["spectators"].([]interface{})),
 	}
 
+	fmt.Println(roomData)
+
 	return roomData, nil
+
+}
+
+// Helper function to convert []interface{} to []string
+func toStringSlice(slice []interface{}) []string {
+	result := make([]string, len(slice))
+	for i, v := range slice {
+		result[i] = v.(string)
+	}
+	return result
 }
 
 func updateRoom(roomId string, roomData Room) (Room, error) {
 	// update room in firestore
 
 	docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
-	_, err := docRef.Set(context.Background(), roomData)
+	jsonData, _ := RoomToMap(roomData)
+	_, err := docRef.Set(context.Background(), jsonData)
 	if err != nil {
 		return Room{}, err
 	}
@@ -145,7 +189,7 @@ func generateRoomId() (string, error) {
 		// check if room exists
 		docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomID)
 		_, err := docRef.Get(context.Background())
-		if err == iterator.Done {
+		if status.Code(err) == codes.NotFound {
 			return roomID, nil
 		}
 
