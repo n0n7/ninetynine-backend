@@ -325,7 +325,7 @@ func randomCard() Card {
 	return CardList[index]
 }
 
-var CardList = [14]Card{
+var CardList = [16]Card{
 	{Value: 1, IsSpecial: false},
 	{Value: 2, IsSpecial: false},
 	{Value: 3, IsSpecial: false},
@@ -336,6 +336,8 @@ var CardList = [14]Card{
 	{Value: 8, IsSpecial: false},
 	{Value: 9, IsSpecial: false},
 	{Value: 10, IsSpecial: false},
+	{Value: -9, IsSpecial: false},
+	{Value: -10, IsSpecial: false},
 	{Value: 0, IsSpecial: true},
 	{Value: 1, IsSpecial: true},
 	{Value: 2, IsSpecial: true},
