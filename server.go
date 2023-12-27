@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"ninetynine/firebase"
 	Firebase "ninetynine/firebase"
+	Webhandler "ninetynine/handler"
 	websocket "ninetynine/websocket"
 
 	"github.com/gorilla/mux"
@@ -22,10 +23,10 @@ func main() {
 	router := mux.NewRouter()
 
 	// request handlers
-	router.HandleFunc("/register", registerHandler)
-	router.HandleFunc("/login", loginHandler)
-	router.HandleFunc("/createroom", createroomHandler)
-	router.HandleFunc("/joinroom", joinroomHandler)
+	router.HandleFunc("/register", Webhandler.RegisterHandler)
+	router.HandleFunc("/login", Webhandler.LoginHandler)
+	router.HandleFunc("/createroom", Webhandler.CreateroomHandler)
+	router.HandleFunc("/joinroom", Webhandler.JoinroomHandler)
 
 	// websocket handlers
 	router.HandleFunc("/ws/{roomId}", websocketHandler)
@@ -60,13 +61,11 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := docRef.Get(context.Background())
 	if err == iterator.Done {
 		fmt.Println("Room", roomId, "does not exist")
-		handleRequestError(w, "room does not exist", http.StatusBadRequest)
 		return
 	}
 
 	if err != nil {
 		fmt.Println("Error getting document", err)
-		handleRequestError(w, "error getting document", http.StatusInternalServerError)
 		return
 	}
 

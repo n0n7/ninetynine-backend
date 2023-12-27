@@ -1,11 +1,11 @@
-package main
+package handler
 
 import (
 	"encoding/json"
 	"net/http"
 )
 
-func handleRequestError(w http.ResponseWriter, errMessage string, statusCode int) {
+func requestErrorHandler(w http.ResponseWriter, errMessage string, statusCode int) {
 	responseData := map[string]interface{}{
 		"error": errMessage,
 	}
