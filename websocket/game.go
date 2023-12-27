@@ -230,6 +230,10 @@ func (game *Game) currentPlayerCount() int {
 }
 
 func (game *Game) CanCurrentPlayerPlay() bool {
+	if game.Players[game.CurrentPlayerIndex].IsOut {
+		return false
+	}
+
 	for _, card := range game.Players[game.CurrentPlayerIndex].Cards {
 		if game.isValidPlay(game.Players[game.CurrentPlayerIndex].PlayerId, card) {
 			return true
