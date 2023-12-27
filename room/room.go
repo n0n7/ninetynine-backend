@@ -186,6 +186,11 @@ func generateRoomId() (string, error) {
 		rand.NewSource(time.Now().UnixNano())
 		roomID := strconv.Itoa(rand.Intn(1e12))
 
+		// fill zeroes if roomID is less than 12 digits
+		for len(roomID) < 12 {
+			roomID = "0" + roomID
+		}
+
 		// check if room exists
 		docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomID)
 		_, err := docRef.Get(context.Background())
