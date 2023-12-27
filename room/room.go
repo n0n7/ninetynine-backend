@@ -184,11 +184,11 @@ func generateRoomId() (string, error) {
 	for {
 		// Generate a random 12-digit room ID
 		rand.NewSource(time.Now().UnixNano())
-		roomID := strconv.Itoa(rand.Intn(1e12))
 
-		// fill zeroes if roomID is less than 12 digits
-		for len(roomID) < 12 {
-			roomID = "0" + roomID
+		roomID := ""
+
+		for i := 0; i < 12; i++ {
+			roomID += strconv.Itoa(rand.Intn(10))
 		}
 
 		// check if room exists
