@@ -82,6 +82,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		"gamestat": map[string]interface{}{
 			"playCount": 0,
 		},
+		"profilePic": "",
 	}
 
 	userData, err = Auth.CreateUser(userData)
