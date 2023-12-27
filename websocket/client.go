@@ -69,7 +69,7 @@ func (c *Client) Read() {
 		switch action {
 		case "join":
 			isValid := true
-			requiredFields := []string{"userId", "username", "profilePics"}
+			requiredFields := []string{"userId", "username", "profilePic"}
 			for _, field := range requiredFields {
 				if _, exists := data[field]; !exists {
 					isValid = false
@@ -91,7 +91,7 @@ func (c *Client) Read() {
 				IsOut:           false,
 				PlayerId:        c.ID,
 				PlayerName:      data["username"].(string),
-				PlayerAvatarURL: data["profilePics"].(string),
+				PlayerAvatarURL: data["profilePic"].(string),
 			}
 			c.Pool.Game.Register <- newPlayer
 			break
