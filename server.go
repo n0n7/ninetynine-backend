@@ -23,6 +23,7 @@ func main() {
 	router.HandleFunc("/login", Handler.LoginHandler)
 	router.HandleFunc("/createroom", Handler.CreateroomHandler)
 	router.HandleFunc("/joinroom", Handler.JoinroomHandler)
+	router.HandleFunc("/getroom", Handler.GetRoomHandler)
 
 	// websocket handlers
 	router.HandleFunc("/ws/{roomId}", Handler.WebsocketHandler)
