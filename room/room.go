@@ -92,7 +92,7 @@ func JoinRoom(userId string, roomId string) (Room, error, string) {
 	// check if user is already in room
 	for _, player := range roomData.Players {
 		if player == userId {
-			return roomData, nil, ""
+			return Room{}, nil, "User is already in room"
 		}
 	}
 
