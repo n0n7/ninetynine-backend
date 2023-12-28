@@ -80,10 +80,13 @@ func PlayerLeft(roomId string, playerId string, isOwner bool) {
 	}
 
 	if isOwner {
-		FirebaseUpdateChannel[roomId] <- FirebaseUpdateData{
-			Field: "ownerId",
-			Value: players[0].(string),
+		if len(players) > 0 {
+			FirebaseUpdateChannel[roomId] <- FirebaseUpdateData{
+				Field: "ownerId",
+				Value: players[0].(string),
+			}
 		}
+
 	}
 
 }
