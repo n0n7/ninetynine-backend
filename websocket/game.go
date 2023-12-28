@@ -17,6 +17,7 @@ type Game struct {
 	CardPerPlayer      int
 	LastPlayedCard     Card
 	Register           chan *Player
+	Reconnect          chan string
 	Unregister         chan string
 	cardPlayed         chan Card
 	StartGame          chan bool
@@ -52,6 +53,7 @@ func NewGame() *Game {
 			IsSpecial: true,
 		}, // empty card
 		Register:   make(chan *Player),
+		Reconnect:  make(chan string),
 		Unregister: make(chan string),
 		cardPlayed: make(chan Card),
 		StartGame:  make(chan bool),
@@ -80,6 +82,18 @@ func (game *Game) Start() {
 			game.Players = append(game.Players, player)
 			fmt.Println("register player", player.PlayerId)
 			game.Pool.GameAction <- fmt.Sprintf("player %v joined", player.PlayerName)
+			break
+
+		case playerId := <-game.Reconnect:
+			fmt.Println("reconnect player", playerId)
+			for _, p := range game.Players {
+				if p.PlayerId == playerId {
+					fmt.Println("reconnect player from the game", p.PlayerId)
+					game.Pool.GameAction <- fmt.Sprintf("player %v reconnect", p.PlayerName)
+					break
+				}
+			}
+			break
 
 		case playerId := <-game.Unregister:
 			if game.Status == "playing" || game.Status == "ended" {
@@ -148,6 +162,7 @@ func (game *Game) Start() {
 			if !game.IsGameEnded() {
 				game.Pool.GameAction <- fmt.Sprintf("player %v played Card%v", player.PlayerName, card)
 			}
+			break
 		}
 
 	}

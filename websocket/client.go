@@ -79,10 +79,24 @@ func (c *Client) Read() {
 
 			if !isValid {
 				c.Conn.WriteJSON(Message{Error: "Invalid request body"})
-				continue
+				break
 			}
 
 			c.ID = data["userId"].(string)
+
+			// check if player is already in the game
+			isInGame := false
+			for _, p := range c.Pool.Game.Players {
+				if p.PlayerId == c.ID {
+					isInGame = true
+					break
+				}
+			}
+
+			if isInGame {
+				c.Pool.Game.Reconnect <- c.ID
+				break
+			}
 
 			// add player to the game
 			newPlayer := &Player{
@@ -99,17 +113,17 @@ func (c *Client) Read() {
 			fmt.Println("start")
 			if c.Pool.Game.Status != "waiting" {
 				c.Conn.WriteJSON(Message{Error: "Game has already started"})
-				continue
+				break
 			}
 
 			if len(c.Pool.Game.Players) < 2 {
 				c.Conn.WriteJSON(Message{Error: "Not enough players"})
-				continue
+				break
 			}
 
 			if c.ID != c.Pool.OwnerId {
 				c.Conn.WriteJSON(Message{Error: "Only owner can start the game"})
-				continue
+				break
 			}
 
 			c.Pool.Game.StartGame <- true
@@ -119,7 +133,7 @@ func (c *Client) Read() {
 			cardData, exists := data["card"]
 			if !exists {
 				c.Conn.WriteJSON(Message{Error: "Invalid request body"})
-				continue
+				break
 			}
 
 			jsonData, _ := json.Marshal(cardData)
@@ -129,7 +143,7 @@ func (c *Client) Read() {
 
 			if !c.Pool.Game.isValidPlay(c.ID, card) {
 				c.Conn.WriteJSON(Message{Error: "Invalid play"})
-				continue
+				break
 			}
 
 			c.Pool.Game.cardPlayed <- card
