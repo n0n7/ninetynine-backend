@@ -34,8 +34,6 @@ func (pool *Pool) Start() {
 		pool.Game.Stop <- true
 	}()
 
-	GameStateChange[pool.RoomId] = make(chan string)
-
 	pool.Game.Pool = pool
 
 	for {

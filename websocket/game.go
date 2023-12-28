@@ -3,10 +3,9 @@ package websocket
 import (
 	"fmt"
 	"math/rand"
+	Room "ninetynine/room"
 	"time"
 )
-
-var GameStateChange = make(map[string]chan string)
 
 type Game struct {
 	Players            []*Player
@@ -64,7 +63,10 @@ func (game *Game) Start() {
 	defer func() {
 		fmt.Println("game stopped")
 		game.Pool.GameAction <- "game ended"
-		GameStateChange[game.Pool.RoomId] <- game.Status
+		Room.FirebaseUpdateChannel[game.Pool.RoomId] <- Room.FirebaseUpdateData{
+			Field: "status",
+			Value: game.Status,
+		}
 	}()
 
 	for {
@@ -129,7 +131,10 @@ func (game *Game) Start() {
 			}
 
 			game.Pool.GameAction <- "game started"
-			GameStateChange[game.Pool.RoomId] <- game.Status
+			Room.FirebaseUpdateChannel[game.Pool.RoomId] <- Room.FirebaseUpdateData{
+				Field: "status",
+				Value: game.Status,
+			}
 			if !game.CanCurrentPlayerPlay() {
 				game.NextPlayer()
 			}

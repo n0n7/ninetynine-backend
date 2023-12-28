@@ -35,7 +35,7 @@
 #         "action": "join",
 #         "userId": str(userId),
 #         "username": "test" + str(random.randint(0, 1000)),
-#         "profilePics": ""
+#         "profilePic": ""
 #     }
 #     ws.send(json.dumps(action))
 
@@ -89,11 +89,10 @@ url = "http://localhost:8080"
 # edit this
 body_data = {
     "userId": "whuf80z9sGMkkSNSuDYydvcIA3q1",
-    "roomId": "264704167916"
 }
 
 # edit this
-path = "/joinroom"
+path = "/createroom"
 
 if __name__ == '__main__':
     res = requests.post(f"{url}{path}", json=body_data)
