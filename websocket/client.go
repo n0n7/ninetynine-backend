@@ -107,6 +107,11 @@ func (c *Client) Read() {
 				continue
 			}
 
+			if c.ID != c.Pool.OwnerId {
+				c.Conn.WriteJSON(Message{Error: "Only owner can start the game"})
+				continue
+			}
+
 			c.Pool.Game.StartGame <- true
 
 			break

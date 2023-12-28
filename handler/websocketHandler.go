@@ -31,9 +31,17 @@ func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	docSnap, err := docRef.Get(context.Background())
+	if err != nil {
+		fmt.Println("Error getting document", err)
+		return
+	}
+
+	roomData := docSnap.Data()
+
 	if _, exist := Pools[roomId]; !exist {
 		fmt.Println("Creating new pool for room", roomId)
-		Pools[roomId] = websocket.NewPool(roomId)
+		Pools[roomId] = websocket.NewPool(roomId, roomData["ownerId"].(string))
 		go Pools[roomId].Start()
 	}
 

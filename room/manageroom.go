@@ -52,3 +52,38 @@ func ManageRoom(roomId string) {
 	}
 
 }
+
+func PlayerLeft(roomId string, playerId string, isOwner bool) {
+	docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
+	docSnap, err := docRef.Get(context.Background())
+	if err != nil {
+		fmt.Println("Error getting document", err)
+		return
+	}
+
+	roomData := docSnap.Data()
+	players := roomData["players"].([]interface{})
+
+	// remove player from players array
+	for i, p := range players {
+		if p.(string) == playerId {
+			players = append(players[:i], players[i+1:]...)
+			break
+		}
+	}
+
+	fmt.Println("players", players)
+
+	FirebaseUpdateChannel[roomId] <- FirebaseUpdateData{
+		Field: "players",
+		Value: players,
+	}
+
+	if isOwner {
+		FirebaseUpdateChannel[roomId] <- FirebaseUpdateData{
+			Field: "ownerId",
+			Value: players[0].(string),
+		}
+	}
+
+}

@@ -1,6 +1,9 @@
 package websocket
 
-import "fmt"
+import (
+	"fmt"
+	Room "ninetynine/room"
+)
 
 type Pool struct {
 	Register   chan *Client
@@ -9,10 +12,11 @@ type Pool struct {
 	Broadcast  chan Message
 	GameAction chan string
 	RoomId     string
+	OwnerId    string
 	Game       *Game
 }
 
-func NewPool(RoomId string) *Pool {
+func NewPool(RoomId string, OwnerId string) *Pool {
 	newGame := NewGame()
 	go newGame.Start()
 	return &Pool{
@@ -22,6 +26,7 @@ func NewPool(RoomId string) *Pool {
 		Broadcast:  make(chan Message),
 		GameAction: make(chan string),
 		RoomId:     RoomId,
+		OwnerId:    OwnerId,
 		Game:       newGame,
 	}
 }
@@ -44,6 +49,7 @@ func (pool *Pool) Start() {
 			break
 		case client := <-pool.Unregister:
 			delete(pool.Clients, client)
+			Room.PlayerLeft(pool.RoomId, client.ID, client.ID == pool.OwnerId)
 			pool.Game.Unregister <- client.ID
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))
 
