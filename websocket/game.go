@@ -108,7 +108,7 @@ func (game *Game) Start() {
 
 			if game.Status == "waiting" {
 				for i, p := range game.Players {
-					if p.PlayerId == p.PlayerId {
+					if p.PlayerId == playerId {
 						game.Players = append(game.Players[:i], game.Players[i+1:]...)
 						fmt.Println("unregister player from the game", p.PlayerId)
 						game.Pool.GameAction <- fmt.Sprintf("player %v left", p.PlayerName)
