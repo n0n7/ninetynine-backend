@@ -53,12 +53,12 @@ func ManageRoom(roomId string) {
 
 }
 
-func PlayerLeft(roomId string, playerId string, isOwner bool) {
+func PlayerLeft(roomId string, playerId string, isOwner bool) string {
 	docRef := Firebase.FirestoreClient.Collection("rooms").Doc(roomId)
 	docSnap, err := docRef.Get(context.Background())
 	if err != nil {
 		fmt.Println("Error getting document", err)
-		return
+		return ""
 	}
 
 	roomData := docSnap.Data()
@@ -87,6 +87,10 @@ func PlayerLeft(roomId string, playerId string, isOwner bool) {
 			}
 		}
 
+		return players[0].(string)
+
+	} else {
+		return roomData["ownerId"].(string)
 	}
 
 }

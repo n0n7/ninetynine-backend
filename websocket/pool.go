@@ -49,7 +49,11 @@ func (pool *Pool) Start() {
 			break
 		case client := <-pool.Unregister:
 			delete(pool.Clients, client)
-			Room.PlayerLeft(pool.RoomId, client.ID, client.ID == pool.OwnerId)
+			newOwner := Room.PlayerLeft(pool.RoomId, client.ID, client.ID == pool.OwnerId)
+			if newOwner != "" {
+				pool.OwnerId = newOwner
+			}
+
 			pool.Game.Unregister <- client.ID
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))
 
