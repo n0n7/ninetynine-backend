@@ -11,5 +11,5 @@ jobs:
       - name: Build and push the Image
         run: |
           docker login --username n0n7 --password ${{ secrets.GH_PAT }} ghcr.io
-          docker build -t ghcr.io/n0n7/ninetynine-backend-ghcr:latest
+          docker build . -t ghcr.io/n0n7/ninetynine-backend-ghcr:latest
           docker push ghcr.io/n0n7/ninetynine-backend-ghcr:latest
