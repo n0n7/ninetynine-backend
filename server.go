@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"ninetynine/firebase"
 	Handler "ninetynine/handler"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
 
@@ -28,7 +30,8 @@ func main() {
 	// websocket handlers
 	router.HandleFunc("/ws/{roomId}", Handler.WebsocketHandler)
 
-	port := ":8080" // Port number to listen on
+	// read PORT from .env file
+	port := getEnv("PORT")
 
 	// setup CORS
 	corsHandler := cors.Default()
@@ -46,4 +49,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func getEnv(key string) string {
+	// load .env file
+	err := godotenv.Load(".env")
+
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	return os.Getenv(key)
 }
