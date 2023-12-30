@@ -85,9 +85,10 @@ func PlayerLeft(roomId string, playerId string, isOwner bool) string {
 				Field: "ownerId",
 				Value: players[0].(string),
 			}
+			return players[0].(string)
 		}
 
-		return players[0].(string)
+		return ""
 
 	} else {
 		return roomData["ownerId"].(string)
