@@ -31,7 +31,7 @@ func main() {
 	router.HandleFunc("/ws/{roomId}", Handler.WebsocketHandler)
 
 	// read PORT from .env file
-	port := getEnv("PORT")
+	port := ":" + getEnv("PORT")
 
 	// setup CORS
 	corsHandler := cors.Default()
