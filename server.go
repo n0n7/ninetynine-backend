@@ -44,8 +44,8 @@ func main() {
 	}
 
 	// Start the HTTP server
-	fmt.Printf("Server is running on http://localhost%s\n", port)
-	err := server.ListenAndServe()
+	fmt.Printf("Server is running on https://localhost%s\n", port)
+	err := server.ListenAndServeTLS("fullchain.pem", "privatekey.pem")
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
