@@ -40,7 +40,7 @@ func AccountSettingHandler(w http.ResponseWriter, r *http.Request) {
 	accountData.Username = data["username"].(string)
 
 	// authenticate user in firestore
-	isValid, err := Auth.AccountSetting(accountData)
+	isValid, userData, err := Auth.AccountSetting(accountData)
 	if err != nil {
 		fmt.Println(err)
 		requestErrorHandler(w, "Internal Server Error", http.StatusInternalServerError)
@@ -54,4 +54,6 @@ func AccountSettingHandler(w http.ResponseWriter, r *http.Request) {
 
 	// write response
 	w.WriteHeader(http.StatusOK)
+	responseJSON, _ := json.Marshal(userData)
+	w.Write(responseJSON)
 }

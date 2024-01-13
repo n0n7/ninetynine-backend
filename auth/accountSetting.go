@@ -14,16 +14,16 @@ type AccountData struct {
 	Username string `json:"username"`
 }
 
-func AccountSetting(data AccountData) (bool, error) {
+func AccountSetting(data AccountData) (bool, map[string]interface{}, error) {
 	docRef := Firebase.FirestoreClient.Collection("users").Doc(data.UserId)
 	docSnap, err := docRef.Get(context.Background())
 
 	if status.Code(err) == codes.NotFound {
-		return false, nil
+		return false, nil, nil
 	}
 
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	userData := docSnap.Data()
@@ -33,10 +33,10 @@ func AccountSetting(data AccountData) (bool, error) {
 
 	_, err = docRef.Set(context.Background(), userData)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
-	return true, nil
+	return true, userData, nil
 
 }
 
