@@ -36,6 +36,8 @@ func AccountSetting(data AccountData) (bool, map[string]interface{}, error) {
 		return false, nil, err
 	}
 
+	userData["userId"] = data.UserId
+
 	return true, userData, nil
 
 }
